@@ -40,7 +40,70 @@
     html { scroll-behavior: auto; }
     .btn { transition: none; }
   }
+
+  /* Consent banner */
+  #consent {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: #FFFFFF; border-top: 1px solid #1A1A1A;
+    padding: 16px clamp(16px, 4vw, 32px);
+    display: flex; align-items: center; justify-content: center;
+    gap: clamp(12px, 3vw, 28px); flex-wrap: wrap;
+    font-size: 14px; line-height: 1.6;
+  }
+  #consent[hidden] { display: none; }
+  #consent p { margin: 0; max-width: 62ch; }
+  #consent .actions { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  #consent button { font-family: 'Playfair Display', serif; cursor: pointer; }
+  #consent .accept {
+    background: #1A1A1A; color: #FFFFFF; border: 1px solid #1A1A1A;
+    font-weight: 700; font-size: 14px; letter-spacing: 0.02em;
+    padding: 10px 22px; transition: background 0.15s ease;
+  }
+  #consent .accept:hover { background: #444444; }
+  #consent .decline {
+    background: none; border: 0; color: #666666;
+    font-size: 14px; padding: 10px 4px; text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  #consent .decline:hover { color: #1A1A1A; }
+  #consent button:focus-visible { outline: 2px solid #1A1A1A; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { #consent .accept { transition: none; } }
 </style>
+
+<script>
+  // Google Analytics 4 with Consent Mode v2.
+  // Analytics storage is denied until the visitor accepts, so no cookies
+  // are set on first load. The stored choice lives in localStorage.
+  window.GA_ID = 'G-JSDNDGZ0N1';
+  window.CONSENT_KEY = 'bk-consent';
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  window.gtag = gtag;
+
+  gtag('consent', 'default', {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'denied',
+    functionality_storage: 'granted',
+    security_storage: 'granted',
+    wait_for_update: 500
+  });
+
+  // Restore a previous "accept" before the tag loads, so returning
+  // visitors are measured from the very first hit.
+  try {
+    var saved = JSON.parse(localStorage.getItem(window.CONSENT_KEY) || 'null');
+    if (saved && saved.state === 'granted') {
+      gtag('consent', 'update', { analytics_storage: 'granted' });
+    }
+  } catch (e) { /* private mode or blocked storage — stay denied */ }
+
+  gtag('js', new Date());
+  gtag('config', window.GA_ID);
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JSDNDGZ0N1"></script>
 </head>
 <body>
 <div style="font-family: 'Lora', Georgia, serif; font-size: 16.5px; line-height: 1.85; overflow-x: hidden">
@@ -125,5 +188,64 @@
     </div>
   </footer>
 </div>
+
+<div id="consent" role="dialog" aria-label="Analytics consent" hidden>
+  <p>I use Google Analytics to see how many people visit and which pages they read. It sets a cookie. Nothing is collected unless you agree.</p>
+  <div class="actions">
+    <button type="button" class="accept" id="consent-accept">Allow</button>
+    <button type="button" class="decline" id="consent-decline">No thanks</button>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var KEY = window.CONSENT_KEY;
+    var banner = document.getElementById('consent');
+
+    function read() {
+      try { return JSON.parse(localStorage.getItem(KEY) || 'null'); }
+      catch (e) { return null; }
+    }
+
+    function save(state) {
+      try { localStorage.setItem(KEY, JSON.stringify({ state: state, at: new Date().toISOString() })); }
+      catch (e) { /* storage unavailable — the choice just won't persist */ }
+    }
+
+    function decide(state) {
+      save(state);
+      if (state === 'granted') {
+        gtag('consent', 'update', { analytics_storage: 'granted' });
+      }
+      banner.hidden = true;
+    }
+
+    // Only ask if there's no answer on file.
+    if (!read()) banner.hidden = false;
+
+    document.getElementById('consent-accept').addEventListener('click', function () { decide('granted'); });
+    document.getElementById('consent-decline').addEventListener('click', function () { decide('denied'); });
+
+    // Named events for the things worth counting. Pageviews, scroll depth
+    // and generic outbound clicks already come from Enhanced Measurement.
+    var EVENTS = [
+      { match: 'parts.bukevicius.co', name: 'open_app' },
+      { match: 'buymeacoffee.com', name: 'coffee_click' },
+      { match: 'mailto:', name: 'contact_click' }
+    ];
+
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest('a[href]');
+      if (!link) return;
+      var href = link.getAttribute('href') || '';
+      for (var i = 0; i < EVENTS.length; i++) {
+        if (href.indexOf(EVENTS[i].match) !== -1) {
+          gtag('event', EVENTS[i].name, { link_url: href, link_text: (link.textContent || '').trim() });
+          break;
+        }
+      }
+    });
+  })();
+</script>
 </body>
 </html>
