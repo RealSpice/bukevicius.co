@@ -1,6 +1,6 @@
 # bukevicius.co
 
-Personal site of Virgil Bukevičius — the story behind [Parts Map](https://parts.bukevicius.co).
+Personal site of Virgil Bukevičius — writing on nervous-system work, and the tools I built: [Parts Map](https://parts.bukevicius.co) and [The Mirror](https://mirror.bukevicius.co).
 
 Static, no build step. `index.html` plus `assets/`.
 
